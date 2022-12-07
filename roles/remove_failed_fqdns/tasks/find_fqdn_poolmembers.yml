@@ -1,0 +1,44 @@
+    - name: Find all pools which reference {{ fqdn }}
+      avi_api_session:        
+        avi_credentials: "{{ avi_credentials }}"
+        http_method: get
+        timeout: 3000
+        path: "pool/?search={{ fqdn }}"
+      register: pools
+
+    - name: Trap controller's cached IP of {{ fqdn }}
+      set_fact: 
+        ip: "{{ pools.obj.results[0] | json_query(ip_query) }}"
+      vars:
+        ip_query: "servers[?hostname=='{{ fqdn }}'].ip.addr"
+      when: pools.obj.results | length > 0
+
+    - name: Trap controller's port of {{ fqdn }}
+      set_fact: 
+        port: "{{ pools.obj.results[0] | json_query(port_query) }}"
+      vars:
+        port_query: "servers[?hostname=='{{ fqdn }}'].port"
+      when: pools.obj.results | length > 0
+
+
+    - name: Update fqdn_poolmembers if port is not the pool default
+      set_fact: 
+        fqdn_poolmembers: "{{ fqdn_poolmembers | default([]) + [{'fqdn': fqdn, 'ip':ip[0], 'port': port[0]}] }}"
+      loop: "{{ query('list', pools.obj.results[0]) }}"
+      loop_control:
+        loop_var: fqdn_poolmember
+      when: 
+        - pools.obj.results | length > 0
+        - ip | length > 0
+        - port | length > 0
+      
+    - name: Update fqdn_poolmembers
+      set_fact: 
+        fqdn_poolmembers: "{{ fqdn_poolmembers | default([]) + [{'fqdn': fqdn, 'ip':ip[0]}] }}"
+      loop: "{{ query('list', pools.obj.results[0]) }}"
+      loop_control:
+        loop_var: fqdn_poolmember
+      when: 
+        - pools.obj.results | length > 0
+        - ip | length > 0
+        - port | length == 0

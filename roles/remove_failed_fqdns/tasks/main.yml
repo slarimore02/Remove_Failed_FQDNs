@@ -1,0 +1,48 @@
+- name: Capture Failed FQDN Pool Members
+  avi_api_session:        
+    avi_credentials: "{{ avi_credentials }}"
+    http_method: get
+    timeout: 3000
+    path: "analytics/logs/?type=2&duration={{ duration }}&end={{ ansible_date_time.iso8601_micro }}&filter=co(event_pages,EVENT_PAGE_ALL)&filter=eq(event_id,%22DNS_QUERY_ERROR%22)&filter=ne(internal,EVENT_INTERNAL)&page_size=100&include_name=true"
+  register: failed_fqdns
+
+- set_fact: 
+    fqdns: "{{ failed_fqdns.obj.results | json_query(fqdn_query) | unique }}"
+  vars:
+    fqdn_query: "[?event_details.dns_query_error.error=='NXDOMAIN'].event_details.dns_query_error.fqdn"
+
+- include_tasks:
+    file: ./find_fqdn_poolmembers.yml
+  loop: "{{ fqdns }}"
+  loop_control:
+    loop_var: fqdn
+
+- name: Create flagged FQDNs File
+  template:
+    src: output.j2
+    dest: "flagged_fqdns.txt"
+  when: fqdn_poolmembers is defined
+
+- pause:
+    prompt: |
+      The following FQDNs have been flagged as unresolvable. Would you like this script to remove these FQDNs as pool members of this cluster? (yes/no)
+      These FQDNs have been logged in flagged_fqdns.txt
+      {% for fqdn_poolmember in fqdn_poolmembers %}
+      {{ fqdn_poolmember.fqdn }}
+      {% endfor %}
+  register: remove
+  when: fqdn_poolmembers is defined
+
+- debug: msg="No FQDNs have been flagged as unresolvable. This playbook will now exit"
+  when: fqdn_poolmembers is undefined
+
+- meta: end_play
+  when: fqdn_poolmembers is undefined
+
+- include_tasks:
+    file: ./update_pools.yml
+  name: Update Pools
+  loop: "{{ fqdn_poolmembers }}"
+  loop_control:
+    loop_var: fqdn_poolmember
+  when: remove.user_input | bool

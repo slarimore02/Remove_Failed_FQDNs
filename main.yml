@@ -1,0 +1,17 @@
+---
+- hosts: localhost
+  connection: local
+  collections:
+    - vmware.alb
+  vars:
+    avi_credentials:
+      controller: <ip or fqdn>
+      username: <username>
+      password: <password>
+      api_version: <api version>
+    duration: 600 #Time in seconds
+
+  tasks:
+    - name: Removed FQDNs which no longer resolve properly
+      include_role:
+        name: remove_failed_fqdns

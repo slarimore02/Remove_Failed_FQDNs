@@ -1,0 +1,28 @@
+- name: Find all pools which reference {{ fqdn_poolmember.fqdn }}
+  avi_api_session:        
+    avi_credentials: "{{ avi_credentials }}"
+    http_method: get
+    timeout: 3000
+    path: "pool/?search={{ fqdn_poolmember.fqdn }}"
+  register: pools
+
+- name: Update Pools to remove {{ fqdn_poolmember.fqdn }} as pool member
+  avi_pool:
+    avi_credentials: "{{ avi_credentials }}"
+    avi_api_update_method: patch
+    avi_api_patch_op: delete
+    name: "{{ pool.name }}"
+    state: present
+    servers:
+      - hostname: "{{ fqdn_poolmember.fqdn }}"
+        resolve_server_by_dns: true
+        ip:
+          addr: "{{ fqdn_poolmember.ip }}"
+          type: V4
+        port: "{{ fqdn_poolmember.port | default(omit) }}"
+  # loop: "{{ query('list', pools.obj.results[0]) }}"
+  loop: "{{ pools.obj.results }}"
+  loop_control:
+    loop_var: pool
+  ignore_errors: true
+  when: pools.obj.results | length > 0
