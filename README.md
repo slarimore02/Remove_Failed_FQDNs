@@ -1,7 +1,7 @@
 # Summary
 This playbook is used to remove Avi pool members which are defined as FQDNs and are no longer resolveable.
 
-High-Level Steps:
+## High-Level Steps
 1. Search Avi logs to find FQDNs which are failing to resolve.
 2. Find pools which are using the failed FQDN(s)
 3. If the FQDN was found in a pool, list in flagged_fqdns.txt and display at the console. User is presented with a yes/no option of proceeding.
