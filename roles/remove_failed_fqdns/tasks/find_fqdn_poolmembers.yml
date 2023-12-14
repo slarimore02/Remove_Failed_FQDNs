@@ -6,6 +6,11 @@
         path: "pool/?search={{ fqdn }}"
       register: pools
 
+    - name: Create list of Pools using FQDN
+      set_fact: 
+        pool_names: "{{ pools.obj.results | json_query('[*].name') }}"
+      when: pools.obj.results | length > 0
+
     - name: Trap controller's cached IP of {{ fqdn }}
       set_fact: 
         ip: "{{ pools.obj.results[0] | json_query(ip_query) }}"
