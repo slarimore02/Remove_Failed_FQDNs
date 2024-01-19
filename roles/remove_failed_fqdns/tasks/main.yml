@@ -17,6 +17,10 @@
   loop_control:
     loop_var: fqdn
 
+- name: Print return information from the previous task
+  ansible.builtin.debug:
+    var: fqdn_poolmembers
+
 - name: Create flagged FQDNs File
   template:
     src: output.j2
