@@ -28,7 +28,7 @@
 
     - name: Update fqdn_poolmembers if port is not the pool default
       set_fact: 
-        fqdn_poolmembers: "{{ fqdn_poolmembers | default([]) + [{'fqdn': fqdn, 'ip':ip[0], 'port': port[0]}] }}"
+        fqdn_poolmembers: "{{ fqdn_poolmembers | default([]) + [{'fqdn': fqdn, 'ip':ip[0], 'port': port[0], 'pools': pool_names}] }}"
       loop: "{{ query('list', pools.obj.results[0]) }}"
       loop_control:
         loop_var: fqdn_poolmember
